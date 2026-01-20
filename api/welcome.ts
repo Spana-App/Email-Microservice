@@ -29,10 +29,11 @@ export default async function handler(
 
     const roleText = role === 'service_provider' ? 'Service Provider' : role === 'admin' ? 'Admin' : 'Customer';
 
-    // Use Render backend URL for now so links are correctly tied to the live backend
+    // Use Render backend URL for now so links are correctly tied to the live backend.
+    // IMPORTANT: Do NOT use CLIENT_URL here yet, as the frontend domain (app.spana.co.za)
+    // is not live. We want all CTAs to hit the Render API directly.
     const rawBaseUrl =
       process.env.EXTERNAL_API_URL ||
-      process.env.CLIENT_URL ||
       'https://spana-server-5bhu.onrender.com';
     const cleanBaseUrl = rawBaseUrl.replace(/\/$/, '');
     const subject = `Welcome to SPANA, ${name}! 🎉`;
