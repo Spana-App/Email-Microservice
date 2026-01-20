@@ -28,6 +28,13 @@ export default async function handler(
     }
 
     const roleText = role === 'service_provider' ? 'Service Provider' : role === 'admin' ? 'Admin' : 'Customer';
+
+    // Use Render backend URL for now so links are correctly tied to the live backend
+    const rawBaseUrl =
+      process.env.EXTERNAL_API_URL ||
+      process.env.CLIENT_URL ||
+      'https://spana-server-5bhu.onrender.com';
+    const cleanBaseUrl = rawBaseUrl.replace(/\/$/, '');
     const subject = `Welcome to SPANA, ${name}! 🎉`;
     const html = `
       <!DOCTYPE html>
@@ -86,7 +93,7 @@ export default async function handler(
               
               ${role !== 'customer' ? `
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://app.spana.co.za" style="background: #0066CC; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">${role === 'service_provider' ? 'Complete Profile' : 'Access Admin Portal'}</a>
+                <a href="${cleanBaseUrl}" style="background: #0066CC; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">${role === 'service_provider' ? 'Complete Profile' : 'Access Admin Portal'}</a>
               </div>
               ` : ''}
               
