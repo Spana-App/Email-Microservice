@@ -15,7 +15,7 @@ export default async function handler(
   }
 
   try {
-    const { to, name, role, apiSecret } = (req as any).body;
+    const { to, name, role, token, uid, apiSecret } = (req as any).body;
 
     if (!to || !name) {
       return (res as any).status(400).json({ message: 'Missing required fields: to, name' });
@@ -94,7 +94,7 @@ export default async function handler(
               
               ${role !== 'customer' ? `
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${cleanBaseUrl}" style="background: #0066CC; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">${role === 'service_provider' ? 'Complete Profile' : 'Access Admin Portal'}</a>
+                <a href="${role === 'service_provider' && token && uid ? `${cleanBaseUrl}/complete-registration?token=${token}&uid=${uid}` : cleanBaseUrl}" style="background: #0066CC; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">${role === 'service_provider' ? 'Complete Profile' : 'Access Admin Portal'}</a>
               </div>
               ` : ''}
               
