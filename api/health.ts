@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Request, Response } from 'express';
+import { isResendEnabled, verifyResendConnection, verifySMTPConnection } from '../lib/email';
 
 // Handler for both Vercel and Express
 export default async function handler(
@@ -10,10 +11,57 @@ export default async function handler(
     return (res as any).status(405).json({ message: 'Method not allowed' });
   }
 
-  return (res as any).status(200).json({
+  const health: any = {
     status: 'healthy',
     service: 'spana-email-service',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
+    version: '1.0.0',
+    providers: {}
+  };
+
+  // Check SMTP first (primary provider - Gmail)
+  const hasSMTPConfig = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+  if (hasSMTPConfig) {
+    try {
+      const smtpHealthy = await verifySMTPConnection();
+      health.providers.smtp = {
+        enabled: true,
+        status: smtpHealthy ? 'connected' : 'error',
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT || '587',
+        from: process.env.SMTP_FROM || process.env.SMTP_USER
+      };
+    } catch (error: any) {
+      health.providers.smtp = {
+        enabled: true,
+        status: 'error',
+        error: error.message
+      };
+    }
+  } else {
+    health.providers.smtp = { enabled: false };
+  }
+
+  // Check Resend (fallback provider, cached to avoid excessive API calls)
+  if (isResendEnabled()) {
+    try {
+      const resendHealthy = await verifyResendConnection();
+      health.providers.resend = {
+        enabled: true,
+        status: resendHealthy ? 'connected' : 'error',
+        note: hasSMTPConfig ? 'Fallback provider' : 'Primary provider',
+        verificationCached: '5 minutes'
+      };
+    } catch (error: any) {
+      health.providers.resend = {
+        enabled: true,
+        status: 'error',
+        error: error.message
+      };
+    }
+  } else {
+    health.providers.resend = { enabled: false };
+  }
+
+  return (res as any).status(200).json(health);
 }
