@@ -176,92 +176,46 @@ export async function sendEmail({
     throw new Error('Unauthorized - Invalid API secret');
   }
 
-  // Prioritize SMTP (Gmail) - try SMTP first
+  // Use SMTP only (Gmail)
   const hasSMTPConfig = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
   
-  if (hasSMTPConfig) {
-    try {
-      // For SMTP, use SMTP_FROM
-      const defaultFrom = process.env.SMTP_FROM || from || process.env.SMTP_USER || 'noreply@spana.co.za';
-      const senderEmail = from || defaultFrom;
-      
-      console.log(`[Email Service] Sending via SMTP (Gmail): ${type} to ${to}`);
-      const transporter = getTransporter();
-      
-      const mailOptions = {
-        from: senderEmail,
-        to,
-        subject,
-        text,
-        html,
-      };
-
-      const result = await transporter.sendMail(mailOptions);
-
-      console.log(`[Email Service] ✅ Email sent successfully via SMTP: ${type} to ${to}`);
-      console.log(`[Email Service] 📧 Message ID: ${result.messageId}`);
-      console.log(`[Email Service] 📬 From: ${senderEmail}`);
-
-      return {
-        success: true,
-        messageId: result.messageId,
-        type,
-        to,
-        subject,
-        timestamp: new Date().toISOString(),
-        provider: 'smtp'
-      };
-    } catch (error: any) {
-      console.error(`[Email Service] ❌ SMTP failed: ${error.message}`);
-      // Fall back to Resend if SMTP fails
-      if (isResendEnabled()) {
-        console.log(`[Email Service] Falling back to Resend...`);
-      } else {
-        throw new Error(`Failed to send email: ${error.message}`);
-      }
-    }
+  if (!hasSMTPConfig) {
+    throw new Error('SMTP configuration is required. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS');
   }
 
-  // Fall back to Resend if SMTP is not configured or failed
-  if (isResendEnabled()) {
-    // For Resend, prioritize RESEND_FROM over SMTP_FROM
-    const defaultFrom = process.env.RESEND_FROM || process.env.SMTP_FROM || from || 'onboarding@resend.dev';
+  try {
+    // For SMTP, use SMTP_FROM
+    const defaultFrom = process.env.SMTP_FROM || from || process.env.SMTP_USER || 'noreply@spana.co.za';
     const senderEmail = from || defaultFrom;
-    try {
-      console.log(`[Email Service] Sending via Resend: ${type} to ${to}`);
-      const resend = getResendClient();
-      
-      const result = await resend.emails.send({
-        from: senderEmail,
-        to,
-        subject,
-        text: text || undefined,
-        html: html || undefined,
-      });
+    
+    console.log(`[Email Service] Sending via SMTP: ${type} to ${to}`);
+    const transporter = getTransporter();
+    
+    const mailOptions = {
+      from: senderEmail,
+      to,
+      subject,
+      text,
+      html,
+    };
 
-      const emailId = result.data?.id || result.id || 'unknown';
-      console.log(`[Email Service] ✅ Email sent successfully via Resend: ${type} to ${to}`);
-      console.log(`[Email Service] 📧 Resend Email ID: ${emailId}`);
-      console.log(`[Email Service] 📬 From: ${senderEmail}`);
-      if (emailId !== 'unknown') {
-        console.log(`[Email Service] 🔗 Check delivery: https://resend.com/emails/${emailId}`);
-      }
+    const result = await transporter.sendMail(mailOptions);
 
-      return {
-        success: true,
-        messageId: result.data?.id || 'unknown',
-        type,
-        to,
-        subject,
-        timestamp: new Date().toISOString(),
-        provider: 'resend'
-      };
-    } catch (error: any) {
-      console.error(`[Email Service] ❌ Resend failed: ${error.message}`);
-      throw new Error(`Failed to send email: ${error.message}`);
-    }
+    console.log(`[Email Service] ✅ Email sent successfully via SMTP: ${type} to ${to}`);
+    console.log(`[Email Service] 📧 Message ID: ${result.messageId}`);
+    console.log(`[Email Service] 📬 From: ${senderEmail}`);
+
+    return {
+      success: true,
+      messageId: result.messageId,
+      type,
+      to,
+      subject,
+      timestamp: new Date().toISOString(),
+      provider: 'smtp'
+    };
+  } catch (error: any) {
+    console.error(`[Email Service] ❌ SMTP failed: ${error.message}`);
+    throw new Error(`Failed to send email via SMTP: ${error.message}`);
   }
-
-  // If neither SMTP nor Resend is configured
-  throw new Error('No email provider configured. Please set SMTP credentials or RESEND_API_KEY');
 }

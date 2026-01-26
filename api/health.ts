@@ -42,26 +42,8 @@ export default async function handler(
     health.providers.smtp = { enabled: false };
   }
 
-  // Check Resend (fallback provider, cached to avoid excessive API calls)
-  if (isResendEnabled()) {
-    try {
-      const resendHealthy = await verifyResendConnection();
-      health.providers.resend = {
-        enabled: true,
-        status: resendHealthy ? 'connected' : 'error',
-        note: hasSMTPConfig ? 'Fallback provider' : 'Primary provider',
-        verificationCached: '5 minutes'
-      };
-    } catch (error: any) {
-      health.providers.resend = {
-        enabled: true,
-        status: 'error',
-        error: error.message
-      };
-    }
-  } else {
-    health.providers.resend = { enabled: false };
-  }
+  // Resend is disabled - using SMTP only
+  health.providers.resend = { enabled: false, note: 'Using SMTP only' };
 
   return (res as any).status(200).json(health);
 }
